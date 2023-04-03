@@ -10,6 +10,7 @@ import {
   SetUser,
   SetAllChats,
   SetSelectGroupForEdit,
+  Logout,
 } from "../redux/userSlice";
 
 function ProtectedRoute({ children, socket }) {
@@ -29,12 +30,14 @@ function ProtectedRoute({ children, socket }) {
         dispatch(SetAllChats(allChatsResponse.data));
       } else {
         toast.error(response.message);
+        dispatch(Logout());
         localStorage.removeItem("token");
         navigate("/login");
       }
     } catch (error) {
       dispatch(HideLoader());
       toast.error(error.message);
+      dispatch(Logout());
       localStorage.removeItem("token");
       navigate("/login");
     }
@@ -99,6 +102,7 @@ function ProtectedRoute({ children, socket }) {
               className="ri-logout-circle-r-line ml-5 text-xl cursor-pointer text-primary"
               onClick={() => {
                 localStorage.removeItem("token");
+                dispatch(Logout());
                 navigate("/login");
                 socket.emit("went-offline", user._id);
               }}

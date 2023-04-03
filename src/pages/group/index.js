@@ -10,15 +10,15 @@ import {
   SetSelectedChat,
 } from "../../redux/userSlice";
 
-const AddEditGroup = () => {
-  const { allUsers, allChats, user, selectGroupForEdit } = useSelector(
-    (state) => state.userReducer
-  );
+const AddEditGroup = ({ socket }) => {
+  const { allUsers, allChats, user, selectGroupForEdit, selectedChat } =
+    useSelector((state) => state.userReducer);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [searchKey, setSearchKey] = useState("");
   const [groupName, setGroupName] = useState("");
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   useEffect(() => {
     if (selectGroupForEdit) {
       setGroupName(selectGroupForEdit.name);
@@ -33,6 +33,8 @@ const AddEditGroup = () => {
       );
     else setSelectedUsers([...selectedUsers, usr]);
   };
+
+
 
   const getUsers = () => {
     if (allUsers) {
@@ -54,6 +56,7 @@ const AddEditGroup = () => {
         toast.error("Name cannot be empty");
         return;
       }
+
       dispatch(ShowLoader());
       let members = selectedUsers.map((mem) => mem._id);
       members = [...members, user._id];
@@ -61,11 +64,13 @@ const AddEditGroup = () => {
         name: groupName,
         members,
         createdBy: user._id,
+        type: "group",
       });
       if (response.success) {
         toast.success(response.message);
         const newChat = response.data;
         const updatedChats = [...allChats, newChat];
+        socket.emit("add-group", { chat: newChat });
         dispatch(SetAllChats(updatedChats));
         dispatch(SetSelectedChat(null));
         navigate("/");
@@ -101,12 +106,16 @@ const AddEditGroup = () => {
       if (response.success) {
         toast.success(response.message);
         const newChat = response.data;
-        console.log(newChat);
+        socket.emit("edit-group", {
+          chat: newChat,
+          members: selectedChat.members.map((mem) => mem._id),
+        });
         let updatedChats = allChats.filter((chat) => chat._id !== newChat._id);
         updatedChats = [...updatedChats, newChat];
         dispatch(SetAllChats(updatedChats));
         dispatch(SetSelectGroupForEdit(null));
         dispatch(SetSelectedChat(null));
+        navigate("/");
       } else {
         toast.error(response.message);
       }

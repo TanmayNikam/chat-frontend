@@ -32,26 +32,28 @@ function Home({ socket }) {
           <UserSearch searchKey={searchKey} setSearchKey={setSearchKey} />
         )}
         <div className="flex items-center w-full gap-1 mt-2 mb-2">
-          <div
+          <button
             className="text-center w-1/2 p-2 text-lg border border-gray-400 rounded cursor-pointer"
             onClick={() => {
               dispatch(ShowLoader());
               dispatch(SetSelectedChat(null));
               setIsGroup(false);
             }}
+            disabled={!isGroup}
           >
             Users
-          </div>
-          <div
+          </button>
+          <button
             className="text-center w-1/2 p-2 text-lg border border-gray-400 rounded cursor-pointer"
             onClick={() => {
               dispatch(ShowLoader());
               dispatch(SetSelectedChat(null));
               setIsGroup(true);
             }}
+            disabled={isGroup}
           >
             Groups
-          </div>
+          </button>
         </div>
         {!isGroup && (
           <UsersList
@@ -61,7 +63,7 @@ function Home({ socket }) {
           />
         )}
 
-        {isGroup && <GroupLists socket={socket} />}
+        {isGroup && <GroupLists socket={socket} setIsGroup={setIsGroup} />}
       </div>
 
       {selectedChat && (

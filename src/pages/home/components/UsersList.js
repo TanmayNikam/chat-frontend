@@ -20,6 +20,7 @@ function UsersList({ searchKey, socket, onlineUsers }) {
         name: "",
         members: [user._id, receipentUserId],
         createdBy: user._id,
+        type: "individual",
       });
       dispatch(HideLoader());
       if (response.success) {
@@ -36,9 +37,9 @@ function UsersList({ searchKey, socket, onlineUsers }) {
       toast.error(error.message);
     }
   };
-
+  
   const openChat = (receipentUserId) => {
-    const chats = allChats.filter((chat) => chat.members.length < 3);
+    const chats = allChats.filter((chat) => chat.type === "individual");
     const chat = chats.find(
       (chat) =>
         chat.members.map((mem) => mem._id).includes(user._id) &&
@@ -54,7 +55,7 @@ function UsersList({ searchKey, socket, onlineUsers }) {
 
     try {
       if (searchKey === "") {
-        return allChats.filter((chat) => chat.members.length < 3) || [];
+        return allChats.filter((chat) => chat.type === "individual") || [];
       }
       return allUsers.filter((user) =>
         user.name.toLowerCase().includes(searchKey.toLowerCase())
@@ -66,7 +67,7 @@ function UsersList({ searchKey, socket, onlineUsers }) {
 
   const getIsSelctedChatOrNot = (userObj) => {
     if (selectedChat) {
-      return selectedChat.members.map((mem) => mem._id).includes(userObj._id);
+      return selectedChat.members.map((mem) => mem._id).includes(userObj?._id);
     }
     return false;
   };
@@ -86,9 +87,9 @@ function UsersList({ searchKey, socket, onlineUsers }) {
   };
 
   const getLastMsg = (userObj) => {
-    const chats = allChats.filter((chat) => chat.members.length < 3);
+    const chats = allChats.filter((chat) => chat.type === "individual");
     const chat = chats.find((chat) =>
-      chat.members.map((mem) => mem._id).includes(userObj._id)
+      chat.members.map((mem) => mem._id).includes(userObj?._id)
     );
     if (!chat || !chat.lastMessage) {
       return "";
@@ -109,9 +110,9 @@ function UsersList({ searchKey, socket, onlineUsers }) {
   };
 
   const getUnreadMessages = (userObj) => {
-    const chats = allChats.filter((chat) => chat.members.length < 3);
+    const chats = allChats.filter((chat) => chat.type === "individual");
     const chat = chats.find((chat) =>
-      chat.members.map((mem) => mem._id).includes(userObj._id)
+      chat.members.map((mem) => mem._id).includes(userObj?._id)
     );
     if (
       chat &&
@@ -132,7 +133,7 @@ function UsersList({ searchKey, socket, onlineUsers }) {
       // if the chat area opened is not equal to chat in message , then increase unread messages by 1 and update last message
       const tempSelectedChat = store.getState().userReducer.selectedChat;
       let tempAllChats = store.getState().userReducer.allChats;
-      tempAllChats = tempAllChats.filter((chat) => chat.members.length < 3);
+      tempAllChats = tempAllChats.filter((chat) => chat.type === "individual");
       if (tempSelectedChat?._id !== message.chat) {
         const updatedAllChats = tempAllChats.map((chat) => {
           if (chat._id === message.chat) {
@@ -164,7 +165,7 @@ function UsersList({ searchKey, socket, onlineUsers }) {
         let userObj = chatObjOrUserObj;
 
         if (chatObjOrUserObj.members) {
-          userObj = chatObjOrUserObj.members.find(
+          userObj = chatObjOrUserObj?.members?.find(
             (mem) => mem._id !== user._id
           );
         }
@@ -173,29 +174,29 @@ function UsersList({ searchKey, socket, onlineUsers }) {
             className={`shadow-sm border p-2 rounded-xl bg-white flex justify-between items-center cursor-pointer w-full
                 ${getIsSelctedChatOrNot(userObj) && "border-primary border-2"}
             `}
-            key={userObj._id}
-            onClick={() => openChat(userObj._id)}
+            key={userObj?._id}
+            onClick={() => openChat(userObj?._id)}
           >
             <div className="flex gap-5 items-center">
-              {userObj.profilePic && (
+              {userObj?.profilePic && (
                 <img
-                  src={userObj.profilePic}
+                  src={userObj?.profilePic}
                   alt="profile pic"
                   className="w-10 h-10 rounded-full"
                 />
               )}
-              {!userObj.profilePic && (
+              {!userObj?.profilePic && (
                 <div className="bg-gray-400 rounded-full h-12 w-12 flex items-center justify-center relative">
                   <h1 className="uppercase text-xl font-semibold text-white">
-                    {userObj.name[0]}
+                    {userObj?.name[0]}
                   </h1>
                 </div>
               )}
               <div className="flex flex-col gap-1">
                 <div className="flex gap-1">
                   <div className="flex gap-1 items-center">
-                    <h1>{userObj.name}</h1>
-                    {onlineUsers.includes(userObj._id) && (
+                    <h1>{userObj?.name}</h1>
+                    {onlineUsers.includes(userObj?._id) && (
                       <div>
                         <div className="bg-green-700 h-3 w-3 rounded-full"></div>
                       </div>
@@ -206,11 +207,11 @@ function UsersList({ searchKey, socket, onlineUsers }) {
                 {getLastMsg(userObj)}
               </div>
             </div>
-            <div onClick={() => createChat(userObj._id)}>
+            <div onClick={() => createChat(userObj?._id)}>
               {!allChats
-                .filter((chat) => chat.members.length < 3)
+                .filter((chat) => chat.type === "individual")
                 .find((chat) =>
-                  chat.members.map((mem) => mem._id).includes(userObj._id)
+                  chat.members.map((mem) => mem._id).includes(userObj?._id)
                 ) && (
                 <button className="border-primary border text-primary bg-white p-1 rounded">
                   Create Chat

@@ -5,7 +5,11 @@ import { ClearChatMessages, clearGroupMessages } from "../../../apicalls/chats";
 import { HideLoader, ShowLoader } from "../../../redux/loaderSlice";
 import toast from "react-hot-toast";
 import moment from "moment";
-import { SetAllChats, SetSelectGroupForEdit } from "../../../redux/userSlice";
+import {
+  SetAllChats,
+  SetSelectGroupForEdit,
+  SetSelectedChat,
+} from "../../../redux/userSlice";
 import store from "../../../redux/store";
 import EmojiPicker from "emoji-picker-react";
 import { useNavigate } from "react-router-dom";
@@ -19,10 +23,9 @@ function ChatArea({ socket, isGroup }) {
     (state) => state.userReducer
   );
   const [messages = [], setMessages] = React.useState([]);
-  const receipentUser =
-    selectedChat.members.length < 3
-      ? selectedChat.members.find((mem) => mem._id !== user._id)
-      : selectedChat;
+  const receipentUser = selectedChat.members.find(
+    (mem) => mem._id !== user._id
+  );
 
   const navigate = useNavigate();
 
@@ -42,7 +45,6 @@ function ChatArea({ socket, isGroup }) {
           .filter((mem) => mem !== user._id),
       };
       // send message to server using socket
-      console.log(message);
       socket.emit("send-message", {
         ...message,
         members: selectedChat?.members.map((mem) => mem._id),
@@ -52,8 +54,10 @@ function ChatArea({ socket, isGroup }) {
 
       // send message to server to save in db
       const response = await SendMessage(message);
-      console.log(response);
       if (response.success) {
+        dispatch(
+          SetSelectedChat({ ...selectedChat, lastMessage: response.data })
+        );
         setNewMessage("");
         setShowEmojiPicker(false);
       }
@@ -80,7 +84,7 @@ function ChatArea({ socket, isGroup }) {
 
   const clearUnreadMessages = async () => {
     try {
-      if (selectedChat.members.length < 3) {
+      if (selectedChat.type === "individual") {
         socket.emit("clear-unread-messages", {
           chat: selectedChat._id,
           members: selectedChat?.members.map((mem) => mem._id),
@@ -107,7 +111,6 @@ function ChatArea({ socket, isGroup }) {
           chat: selectedChat._id,
           usr: user._id,
         });
-        console.log(response);
       }
     } catch (error) {
       console.log(error);
@@ -221,7 +224,6 @@ function ChatArea({ socket, isGroup }) {
       navigate("/create-edit-group");
     }
   };
-  console.log(messages);
   return (
     <div
       className={`bg-white h-[82vh] border rounded-2xl w-full flex flex-col justify-between p-5 ${
@@ -233,21 +235,32 @@ function ChatArea({ socket, isGroup }) {
           className="flex gap-5 items-center mb-2"
           onClick={handleUserNameClick}
         >
-          {receipentUser.profilePic && (
+          {selectedChat.type === "group" && (
+            <div className="bg-gray-500  rounded-full h-10 w-10 flex items-center justify-center">
+              <h1 className="uppercase text-xl font-semibold text-white">
+                {selectedChat.name[0]}
+              </h1>
+            </div>
+          )}
+          {selectedChat.type === "individual" && receipentUser.profilePic && (
             <img
               src={receipentUser.profilePic}
               alt="profile pic"
               className="w-10 h-10 rounded-full"
             />
           )}
-          {!receipentUser.profilePic && (
+          {selectedChat.type === "individual" && !receipentUser.profilePic && (
             <div className="bg-gray-500  rounded-full h-10 w-10 flex items-center justify-center">
               <h1 className="uppercase text-xl font-semibold text-white">
                 {receipentUser.name[0]}
               </h1>
             </div>
           )}
-          <h1 className="uppercase">{receipentUser.name}</h1>
+          <h1 className="uppercase">
+            {selectedChat.type === "individual"
+              ? receipentUser.name
+              : selectedChat.name}
+          </h1>
         </div>
         <hr />
       </div>
@@ -262,14 +275,14 @@ function ChatArea({ socket, isGroup }) {
                   {message.text && (
                     <div
                       className={`${
-                        selectedChat.members.length > 2 && "flex flex-col"
+                        selectedChat.type === "group" && "flex flex-col"
                       } ${
                         isCurrentUserIsSender
                           ? "bg-gray-300 text-primary rounded-bl-none"
                           : "bg-gray-300 text-primary rounded-tr-none"
                       } p-2 rounded-xl`}
                     >
-                      {selectedChat.members.length > 2 && (
+                      {selectedChat.type === "group" && (
                         <h1 className="text-primary text-xs m-1 bg-gray-300">
                           {getUserName(message.sender)}
                         </h1>
@@ -292,7 +305,7 @@ function ChatArea({ socket, isGroup }) {
                   <div className="p-2">
                     <i
                       className={`ri-check-double-fill text-xl p1 font-semibold ${
-                        selectedChat.members.length < 3
+                        selectedChat.type === "individual"
                           ? message.read
                             ? "text-blue-700"
                             : "text-gray-400"

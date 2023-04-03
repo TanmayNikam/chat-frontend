@@ -31,7 +31,6 @@ function Profile() {
     try {
       dispatch(ShowLoader());
       const response = await UpdateProfilePicture(image);
-      console.log(response);
       dispatch(HideLoader());
       if (response.success) {
         toast.success("Profile Pic Updated");

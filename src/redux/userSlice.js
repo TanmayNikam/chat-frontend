@@ -26,6 +26,13 @@ const userSlice = createSlice({
     SetSelectGroupForEdit: (state, action) => {
       state.selectGroupForEdit = action.payload;
     },
+    Logout: (state, action) => {
+      state.user = null;
+      state.allUsers = [];
+      state.allChats = [];
+      state.selectedChat = null;
+      state.selectGroupForEdit = null;
+    },
   },
 });
 
@@ -35,6 +42,7 @@ export const {
   SetAllChats,
   SetSelectedChat,
   SetSelectGroupForEdit,
+  Logout,
 } = userSlice.actions;
 
 export default userSlice.reducer;

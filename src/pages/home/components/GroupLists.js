@@ -4,7 +4,7 @@ import { HideLoader } from "../../../redux/loaderSlice";
 import moment from "moment";
 import { SetAllChats, SetSelectedChat } from "../../../redux/userSlice";
 
-const GroupLists = () => {
+const GroupLists = ({ socket, setIsGroup }) => {
   const { allChats, user } = useSelector((state) => state.userReducer);
   const [groups, setGroups] = useState([]);
   const dispatch = useDispatch();
@@ -12,7 +12,7 @@ const GroupLists = () => {
   useEffect(() => {
     let group = allChats?.filter(
       (chat) =>
-        chat.members.length > 2 &&
+        chat.type === "group" &&
         chat.members.map((mem) => mem._id).includes(user._id)
     );
     setGroups(group);
@@ -33,12 +33,33 @@ const GroupLists = () => {
     return result;
   };
 
-  const getLastMsg = (obj) => {
-    // const chats = allChats.filter((chat) => chat.members.length > 2);
-    // const chat = chats.find((chat) =>
-    //   chat.members.map((mem) => mem._id).includes(obj._id)
-    // );
+  useEffect(() => {
+    socket.on("new-group", (data) => {
+      if (data.chat.members.map((mem) => mem._id).includes(user._id)) {
+        let updatedChats = [...allChats, data.chat];
+        dispatch(SetAllChats(updatedChats));
+      }
+    });
 
+    socket.on("group-edit", (data) => {
+      if (!data.chat.members.map((mem) => mem._id).includes(user._id)) {
+        let updatedChats = allChats.filter(
+          (chat) => chat._id !== data.chat._id
+        );
+        dispatch(SetAllChats(updatedChats));
+        dispatch(SetSelectedChat(null));
+      } else if (
+        data.chat.members.map((mem) => mem._id).includes(user._id) &&
+        !data.members.includes(user._id)
+      ) {
+        let updatedChats = [...allChats, data.chat];
+        dispatch(SetAllChats(updatedChats));
+        setIsGroup(false);
+      }
+    });
+  }, []);
+
+  const getLastMsg = (obj) => {
     if (!obj || !obj.lastMessage) {
       return "";
     } else {
@@ -63,6 +84,7 @@ const GroupLists = () => {
 
   return (
     <div>
+      {!groups && <h1>No Groups To Show</h1>}
       {groups &&
         groups.map((group) => (
           <div
@@ -73,7 +95,7 @@ const GroupLists = () => {
               <div className="bg-gray-400 rounded-full h-12 w-12 flex items-center justify-center relative">
                 <div>
                   <h1 className="uppercase text-xl font-semibold text-white">
-                    {group.name[0]}
+                    {group?.name[0]}
                   </h1>
                 </div>
               </div>

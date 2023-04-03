@@ -10,6 +10,7 @@ import Loader from "./components/Loader";
 import { io } from "socket.io-client";
 import AddEditGroup from "./pages/group";
 // https://chattome-backend.onrender.com
+// https://chattome-backend.onrender.com
 const socket = io("https://chattome-backend.onrender.com");
 
 function App() {
@@ -40,7 +41,7 @@ function App() {
             path="/create-edit-group"
             element={
               <ProtectedRoute socket={socket}>
-                <AddEditGroup />
+                <AddEditGroup socket={socket} />
               </ProtectedRoute>
             }
           />
