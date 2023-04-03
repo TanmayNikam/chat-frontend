@@ -7,6 +7,7 @@ const userSlice = createSlice({
     allUsers: [],
     allChats: [],
     selectedChat: null,
+    selectGroupForEdit: null,
   },
 
   reducers: {
@@ -22,10 +23,18 @@ const userSlice = createSlice({
     SetSelectedChat: (state, action) => {
       state.selectedChat = action.payload;
     },
+    SetSelectGroupForEdit: (state, action) => {
+      state.selectGroupForEdit = action.payload;
+    },
   },
 });
 
-export const { SetUser, SetAllUsers, SetAllChats, SetSelectedChat } =
-  userSlice.actions;
+export const {
+  SetUser,
+  SetAllUsers,
+  SetAllChats,
+  SetSelectedChat,
+  SetSelectGroupForEdit,
+} = userSlice.actions;
 
 export default userSlice.reducer;

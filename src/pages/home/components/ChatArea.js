@@ -1,26 +1,30 @@
 import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { GetMessages, SendMessage } from "../../../apicalls/messages";
-import { ClearChatMessages } from "../../../apicalls/chats";
+import { ClearChatMessages, clearGroupMessages } from "../../../apicalls/chats";
 import { HideLoader, ShowLoader } from "../../../redux/loaderSlice";
 import toast from "react-hot-toast";
 import moment from "moment";
-import { SetAllChats } from "../../../redux/userSlice";
+import { SetAllChats, SetSelectGroupForEdit } from "../../../redux/userSlice";
 import store from "../../../redux/store";
 import EmojiPicker from "emoji-picker-react";
+import { useNavigate } from "react-router-dom";
 
-function ChatArea({ socket }) {
+function ChatArea({ socket, isGroup }) {
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false);
   const [isReceipentTyping, setIsReceipentTyping] = React.useState(false);
   const dispatch = useDispatch();
   const [newMessage, setNewMessage] = React.useState("");
-  const { selectedChat, user, allChats } = useSelector(
+  const { selectedChat, user, allChats, allUsers } = useSelector(
     (state) => state.userReducer
   );
   const [messages = [], setMessages] = React.useState([]);
-  const receipentUser = selectedChat.members.find(
-    (mem) => mem._id !== user._id
-  );
+  const receipentUser =
+    selectedChat.members.length < 3
+      ? selectedChat.members.find((mem) => mem._id !== user._id)
+      : selectedChat;
+
+  const navigate = useNavigate();
 
   const sendNewMessage = async (image) => {
     try {
@@ -33,11 +37,15 @@ function ChatArea({ socket }) {
         sender: user._id,
         text: newMessage,
         image,
+        readBy: selectedChat?.members
+          .map((mem) => mem._id)
+          .filter((mem) => mem !== user._id),
       };
       // send message to server using socket
+      console.log(message);
       socket.emit("send-message", {
         ...message,
-        members: selectedChat.members.map((mem) => mem._id),
+        members: selectedChat?.members.map((mem) => mem._id),
         createdAt: moment(new Date().toISOString()).format("YYYY-MM-DD h:mm a"),
         read: false,
       });
@@ -65,29 +73,44 @@ function ChatArea({ socket }) {
       }
     } catch (error) {
       dispatch(HideLoader());
+      console.log(error);
       toast.error(error.message);
     }
   };
 
   const clearUnreadMessages = async () => {
     try {
-      socket.emit("clear-unread-messages", {
-        chat: selectedChat._id,
-        members: selectedChat.members.map((mem) => mem._id),
-      });
-
-      const response = await ClearChatMessages(selectedChat._id);
-
-      if (response.success) {
-        const updatedChats = allChats.map((chat) => {
-          if (chat._id === selectedChat._id) {
-            return response.data;
-          }
-          return chat;
+      if (selectedChat.members.length < 3) {
+        socket.emit("clear-unread-messages", {
+          chat: selectedChat._id,
+          members: selectedChat?.members.map((mem) => mem._id),
         });
-        dispatch(SetAllChats(updatedChats));
+
+        const response = await ClearChatMessages(selectedChat._id);
+
+        if (response.success) {
+          const updatedChats = allChats?.map((chat) => {
+            if (chat._id === selectedChat?._id) {
+              return response.data;
+            }
+            return chat;
+          });
+          dispatch(SetAllChats(updatedChats));
+        }
+      } else {
+        socket.emit("clear-group-unread-messages", {
+          chat: selectedChat._id,
+          members: selectedChat?.members.map((mem) => mem._id),
+          usr: user._id,
+        });
+        const response = await clearGroupMessages({
+          chat: selectedChat._id,
+          usr: user._id,
+        });
+        console.log(response);
       }
     } catch (error) {
+      console.log(error);
       toast.error(error.message);
     }
   };
@@ -131,7 +154,7 @@ function ChatArea({ socket }) {
       const tempSelectedChat = store.getState().userReducer.selectedChat;
 
       if (data.chat === tempSelectedChat._id) {
-        const updatedChats = tempAllChats.map((chat) => {
+        const updatedChats = tempAllChats?.map((chat) => {
           if (chat._id === data.chat) {
             return {
               ...chat,
@@ -143,7 +166,7 @@ function ChatArea({ socket }) {
         dispatch(SetAllChats(updatedChats));
 
         setMessages((prevMessages) => {
-          return prevMessages.map((message) => {
+          return prevMessages?.map((message) => {
             return {
               ...message,
               read: true,
@@ -151,6 +174,17 @@ function ChatArea({ socket }) {
           });
         });
       }
+    });
+
+    socket.on("unread-group-messages-cleared", (data) => {
+      setMessages((prevMessages) => {
+        return prevMessages?.map((msg) => {
+          return {
+            ...msg,
+            readBy: msg.readBy.filter((mem) => mem !== data.usr),
+          };
+        });
+      });
     });
 
     socket.on("started-typing", (data) => {
@@ -177,11 +211,28 @@ function ChatArea({ socket }) {
       sendNewMessage(reader.result);
     };
   };
+  const getUserName = (userId) => {
+    return allUsers.find((usr) => usr._id === userId)?.name;
+  };
 
+  const handleUserNameClick = () => {
+    if (isGroup && user._id === selectedChat.createdBy) {
+      dispatch(SetSelectGroupForEdit(selectedChat));
+      navigate("/create-edit-group");
+    }
+  };
+  console.log(messages);
   return (
-    <div className="bg-white h-[82vh] border rounded-2xl w-full flex flex-col justify-between p-5">
+    <div
+      className={`bg-white h-[82vh] border rounded-2xl w-full flex flex-col justify-between p-5 ${
+        isGroup && "cursor-pointer"
+      }`}
+    >
       <div>
-        <div className="flex gap-5 items-center mb-2">
+        <div
+          className="flex gap-5 items-center mb-2"
+          onClick={handleUserNameClick}
+        >
           {receipentUser.profilePic && (
             <img
               src={receipentUser.profilePic}
@@ -203,21 +254,28 @@ function ChatArea({ socket }) {
 
       <div className="h-[55vh] overflow-y-scroll p-5" id="messages">
         <div className="flex flex-col gap-2">
-          {messages.map((message, index) => {
+          {messages?.map((message, index) => {
             const isCurrentUserIsSender = message.sender === user._id;
             return (
               <div className={`flex ${isCurrentUserIsSender && "justify-end"}`}>
                 <div className="flex flex-col gap-1">
                   {message.text && (
-                    <h1
+                    <div
                       className={`${
+                        selectedChat.members.length > 2 && "flex flex-col"
+                      } ${
                         isCurrentUserIsSender
-                          ? "bg-primary text-white rounded-bl-none"
+                          ? "bg-gray-300 text-primary rounded-bl-none"
                           : "bg-gray-300 text-primary rounded-tr-none"
                       } p-2 rounded-xl`}
                     >
-                      {message.text}
-                    </h1>
+                      {selectedChat.members.length > 2 && (
+                        <h1 className="text-primary text-xs m-1 bg-gray-300">
+                          {getUserName(message.sender)}
+                        </h1>
+                      )}
+                      <h1>{message.text}</h1>
+                    </div>
                   )}
                   {message.image && (
                     <img
@@ -234,7 +292,13 @@ function ChatArea({ socket }) {
                   <div className="p-2">
                     <i
                       className={`ri-check-double-fill text-xl p1 font-semibold ${
-                        message.read ? "text-blue-700" : "text-gray-400"
+                        selectedChat.members.length < 3
+                          ? message.read
+                            ? "text-blue-700"
+                            : "text-gray-400"
+                          : message?.readBy?.length === 0
+                          ? "text-blue-700"
+                          : "text-gray-400"
                       }`}
                     ></i>
                   </div>
@@ -266,7 +330,7 @@ function ChatArea({ socket }) {
 
         <div className="flex gap-2 text-xl">
           <label for="file">
-            <i class="ri-link cursor-pointer text-xl" typeof="file"></i>
+            <i className="ri-link cursor-pointer text-xl" typeof="file"></i>
             <input
               type="file"
               id="file"
@@ -278,7 +342,7 @@ function ChatArea({ socket }) {
             />
           </label>
           <i
-            class="ri-emotion-line cursor-pointer text-xl"
+            className="ri-emotion-line cursor-pointer text-xl"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
           ></i>
         </div>
@@ -292,7 +356,7 @@ function ChatArea({ socket }) {
             setNewMessage(e.target.value);
             socket.emit("typing", {
               chat: selectedChat._id,
-              members: selectedChat.members.map((mem) => mem._id),
+              members: selectedChat?.members?.map((mem) => mem._id),
               sender: user._id,
             });
           }}

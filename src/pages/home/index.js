@@ -1,13 +1,19 @@
-import React, { useEffect } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import ChatArea from "./components/ChatArea";
 import UserSearch from "./components/UserSearch";
 import UsersList from "./components/UsersList";
+import GroupLists from "./components/GroupLists";
+import { ShowLoader } from "../../redux/loaderSlice";
+import { SetSelectedChat } from "../../redux/userSlice";
 
 function Home({ socket }) {
   const [searchKey, setSearchKey] = React.useState("");
   const { selectedChat, user } = useSelector((state) => state.userReducer);
   const [onlineUsers, setOnlineUsers] = React.useState([]);
+  const [isGroup, setIsGroup] = useState(false);
+  const dispatch = useDispatch();
+
   useEffect(() => {
     if (user) {
       socket.emit("join-room", user._id);
@@ -22,17 +28,45 @@ function Home({ socket }) {
   return (
     <div className="flex gap-5">
       <div className="w-96">
-        <UserSearch searchKey={searchKey} setSearchKey={setSearchKey} />
-        <UsersList
-          searchKey={searchKey}
-          socket={socket}
-          onlineUsers={onlineUsers}
-        />
+        {!isGroup && (
+          <UserSearch searchKey={searchKey} setSearchKey={setSearchKey} />
+        )}
+        <div className="flex items-center w-full gap-1 mt-2 mb-2">
+          <div
+            className="text-center w-1/2 p-2 text-lg border border-gray-400 rounded cursor-pointer"
+            onClick={() => {
+              dispatch(ShowLoader());
+              dispatch(SetSelectedChat(null));
+              setIsGroup(false);
+            }}
+          >
+            Users
+          </div>
+          <div
+            className="text-center w-1/2 p-2 text-lg border border-gray-400 rounded cursor-pointer"
+            onClick={() => {
+              dispatch(ShowLoader());
+              dispatch(SetSelectedChat(null));
+              setIsGroup(true);
+            }}
+          >
+            Groups
+          </div>
+        </div>
+        {!isGroup && (
+          <UsersList
+            searchKey={searchKey}
+            socket={socket}
+            onlineUsers={onlineUsers}
+          />
+        )}
+
+        {isGroup && <GroupLists socket={socket} />}
       </div>
 
       {selectedChat && (
         <div className="w-full">
-          <ChatArea socket={socket} />
+          <ChatArea socket={socket} isGroup={isGroup} />
         </div>
       )}
 

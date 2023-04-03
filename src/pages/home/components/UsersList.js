@@ -12,10 +12,15 @@ function UsersList({ searchKey, socket, onlineUsers }) {
     (state) => state.userReducer
   );
   const dispatch = useDispatch();
-  const createNewChat = async (receipentUserId) => {
+
+  const createChat = async (receipentUserId) => {
     try {
       dispatch(ShowLoader());
-      const response = await CreateNewChat([user._id, receipentUserId]);
+      const response = await CreateNewChat({
+        name: "",
+        members: [user._id, receipentUserId],
+        createdBy: user._id,
+      });
       dispatch(HideLoader());
       if (response.success) {
         toast.success(response.message);
@@ -33,7 +38,8 @@ function UsersList({ searchKey, socket, onlineUsers }) {
   };
 
   const openChat = (receipentUserId) => {
-    const chat = allChats.find(
+    const chats = allChats.filter((chat) => chat.members.length < 3);
+    const chat = chats.find(
       (chat) =>
         chat.members.map((mem) => mem._id).includes(user._id) &&
         chat.members.map((mem) => mem._id).includes(receipentUserId)
@@ -45,13 +51,13 @@ function UsersList({ searchKey, socket, onlineUsers }) {
 
   const getData = () => {
     // if search key is empty then return all chats else return filtered chats and users
+
     try {
       if (searchKey === "") {
-        return allChats || [];
+        return allChats.filter((chat) => chat.members.length < 3) || [];
       }
-      return allUsers.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchKey.toLowerCase()) || []
+      return allUsers.filter((user) =>
+        user.name.toLowerCase().includes(searchKey.toLowerCase())
       );
     } catch (error) {
       return [];
@@ -70,11 +76,9 @@ function UsersList({ searchKey, socket, onlineUsers }) {
 
     if (moment(date).isSame(moment(), "day")) {
       result = moment(date).format("hh:mm");
-    }
-    else if (moment(date).isSame(moment().subtract(1, "day"), "day")) {
+    } else if (moment(date).isSame(moment().subtract(1, "day"), "day")) {
       result = `Yesterday ${moment(date).format("hh:mm")}`;
-    }
-    else if (moment(date).isSame(moment(), "year")) {
+    } else if (moment(date).isSame(moment(), "year")) {
       result = moment(date).format("MMM DD hh:mm");
     }
 
@@ -82,7 +86,8 @@ function UsersList({ searchKey, socket, onlineUsers }) {
   };
 
   const getLastMsg = (userObj) => {
-    const chat = allChats.find((chat) =>
+    const chats = allChats.filter((chat) => chat.members.length < 3);
+    const chat = chats.find((chat) =>
       chat.members.map((mem) => mem._id).includes(userObj._id)
     );
     if (!chat || !chat.lastMessage) {
@@ -104,7 +109,8 @@ function UsersList({ searchKey, socket, onlineUsers }) {
   };
 
   const getUnreadMessages = (userObj) => {
-    const chat = allChats.find((chat) =>
+    const chats = allChats.filter((chat) => chat.members.length < 3);
+    const chat = chats.find((chat) =>
       chat.members.map((mem) => mem._id).includes(userObj._id)
     );
     if (
@@ -121,10 +127,12 @@ function UsersList({ searchKey, socket, onlineUsers }) {
   };
 
   useEffect(() => {
+    dispatch(HideLoader());
     socket.on("receive-message", (message) => {
       // if the chat area opened is not equal to chat in message , then increase unread messages by 1 and update last message
       const tempSelectedChat = store.getState().userReducer.selectedChat;
       let tempAllChats = store.getState().userReducer.allChats;
+      tempAllChats = tempAllChats.filter((chat) => chat.members.length < 3);
       if (tempSelectedChat?._id !== message.chat) {
         const updatedAllChats = tempAllChats.map((chat) => {
           if (chat._id === message.chat) {
@@ -198,10 +206,12 @@ function UsersList({ searchKey, socket, onlineUsers }) {
                 {getLastMsg(userObj)}
               </div>
             </div>
-            <div onClick={() => createNewChat(userObj._id)}>
-              {!allChats.find((chat) =>
-                chat.members.map((mem) => mem._id).includes(userObj._id)
-              ) && (
+            <div onClick={() => createChat(userObj._id)}>
+              {!allChats
+                .filter((chat) => chat.members.length < 3)
+                .find((chat) =>
+                  chat.members.map((mem) => mem._id).includes(userObj._id)
+                ) && (
                 <button className="border-primary border text-primary bg-white p-1 rounded">
                   Create Chat
                 </button>

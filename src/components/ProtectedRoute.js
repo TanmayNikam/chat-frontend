@@ -5,7 +5,12 @@ import { useNavigate } from "react-router-dom";
 import { GetAllChats } from "../apicalls/chats";
 import { GetAllUsers, GetCurrentUser } from "../apicalls/users";
 import { HideLoader, ShowLoader } from "../redux/loaderSlice";
-import { SetAllUsers, SetUser, SetAllChats } from "../redux/userSlice";
+import {
+  SetAllUsers,
+  SetUser,
+  SetAllChats,
+  SetSelectGroupForEdit,
+} from "../redux/userSlice";
 
 function ProtectedRoute({ children, socket }) {
   const { user } = useSelector((state) => state.userReducer);
@@ -58,34 +63,47 @@ function ProtectedRoute({ children, socket }) {
             CHATiFY
           </h1>
         </div>
-        <div className="flex gap-2 text-md items-center bg-white p-2 rounded">
-          {user?.profilePic && (
-            <img
-              src={user?.profilePic}
-              alt="profile"
-              className="h-8 w-8 rounded-full object-cover"
-            />
-          )}
-          {!user?.profilePic && (
-            <i class="ri-shield-user-line text-primary"></i>
-          )}
-          <h1
-            className="underline text-primary cursor-pointer"
-            onClick={() => {
-              navigate("/profile");
-            }}
-          >
-            {user?.name}
-          </h1>
+        <div className="flex gap-5">
+          <div className="gap-2">
+            <button
+              className="outlined-btn text-white bg-white rounded-lg"
+              onClick={() => {
+                dispatch(SetSelectGroupForEdit(null));
+                navigate("/create-edit-group");
+              }}
+            >
+              Create Group
+            </button>
+          </div>
+          <div className="flex gap-2 text-md items-center bg-white p-2 rounded">
+            {user?.profilePic && (
+              <img
+                src={user?.profilePic}
+                alt="profile"
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            )}
+            {!user?.profilePic && (
+              <i className="ri-shield-user-line text-primary"></i>
+            )}
+            <h1
+              className="underline text-primary cursor-pointer"
+              onClick={() => {
+                navigate("/profile");
+              }}
+            >
+              {user?.name}
+            </h1>
 
-          <i
-            class="ri-logout-circle-r-line ml-5 text-xl cursor-pointer text-primary"
-            onClick={() => {
-              localStorage.removeItem("token");
-              navigate("/login");
-              socket.emit("went-offline", user._id);
-            }}
-          ></i>
+            <i
+              className="ri-logout-circle-r-line ml-5 text-xl cursor-pointer text-primary"
+              onClick={() => {
+                localStorage.removeItem("token");
+                navigate("/login");
+                socket.emit("went-offline", user._id);
+              }}
+            ></i>
+          </div>
         </div>
       </div>
 

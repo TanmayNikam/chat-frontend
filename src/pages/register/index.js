@@ -20,7 +20,8 @@ function Register() {
       const response = await RegisterUser(user);
       dispatch(HideLoader());
       if (response.success) {
-        toast.success(response.message);
+        toast.success("Registered Successfully, Login to Continue");
+        navigate("/login");
       } else {
         toast.error(response.message);
       }
@@ -42,7 +43,7 @@ function Register() {
         <div className="flex gap-2">
           <i className="ri-message-3-line text-2xl text-primary"></i>
           <h1 className="text-2xl uppercase font-semibold text-primary">
-           Chatify register{" "}
+            Chatify register{" "}
           </h1>
         </div>
         <hr />

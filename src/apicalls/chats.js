@@ -12,13 +12,11 @@ export const GetAllChats = async () => {
   }
 };
 
-export const CreateNewChat = async (members) => {
+export const CreateNewChat = async (chat) => {
   try {
     const response = await axiosInstance.post(
       `${API_URL}/api/chats/create-new-chat`,
-      {
-        members,
-      }
+      { ...chat }
     );
     return response.data;
   } catch (error) {
@@ -36,6 +34,34 @@ export const ClearChatMessages = async (chatId) => {
     );
     return response.data;
   } catch (error) {
+    throw error;
+  }
+};
+
+export const updateGroup = async (chat) => {
+  try {
+    const response = await axiosInstance.patch(
+      `${API_URL}/api/chats/update-group`,
+      {
+        chat,
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
+export const clearGroupMessages = async (chat) => {
+  try {
+    const response = await axiosInstance.patch(
+      `${API_URL}/api/chats/clear-group-unread-messages`,
+      { chat: chat.chat, usr: chat.usr }
+    );
+    return response.data;
+  } catch (error) {
+    console.log(error);
     throw error;
   }
 };
